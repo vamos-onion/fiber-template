@@ -1,0 +1,50 @@
+# Modify this filename as .env to use
+
+# Stage status to start server:
+#   - "dev", for start server without graceful shutdown
+#   - "prod", for start server with graceful shutdown
+#       - query.log as file (no stdout)
+STAGE_STATUS="dev"
+
+# Server settings:
+SERVER_HOST="0.0.0.0"
+SERVER_DOMAIN="server.domain.com"
+SERVER_PORT=5000
+SERVER_READ_TIMEOUT=60
+
+# Websocket settings:
+WSCONN_TIMEOUT=120                  # websocket timeout : {WSCONN_TIMEOUT} * minute  # should edit nginx default config : proxy_read_timeout {SECOND}; as same value
+
+# Database settings:
+DB_USERNAME="username"
+DB_PASSWORD="password"
+DB_IP="localhost"
+DB_PORT=3306
+DB_NAME="dbname"
+DB_MAX_IDLE_CONNECTIONS=1000        # https://cs.opensource.google/go/go/+/go1.18.3:src/database/sql/sql.go;l=960
+DB_MAX_OPEN_CONNECTIONS=30000       # https://cs.opensource.google/go/go/+/go1.18.3:src/database/sql/sql.go;l=994
+DB_CONNECTION_MAX_LIFETIME=2        # https://cs.opensource.google/go/go/+/go1.18.3:src/database/sql/sql.go;l=1012
+DB_LOG_LEVEL=4                      # https://github.com/go-gorm/gorm/blob/v1.23.6/logger/logger.go#L35
+
+# Logrus log level
+LOG_DETAIL_LEVEL=7                  # https://github.com/sirupsen/logrus/blob/v1.8.1/logrus.go#L13
+LOG_STDOUT_LEVEL=7
+
+# SSO settings:
+SSO_SECRET="sso_secret"
+
+# JWT settings:
+JWT_SECRET_KEY="secret"
+JWT_SECRET_KEY_EXPIRE_MINUTES_COUNT=10
+JWT_REFRESH_KEY="refresh"
+JWT_REFRESH_KEY_EXPIRE_HOURS_COUNT=1
+
+# HTTP Cookie settings:
+HTTP_COOKIE_ACCESS_EXPIRY=10
+HTTP_COOKIE_REFRESH_EXPIRY=15
+
+# Redis settings:
+REDIS_HOST="localhost"
+REDIS_PORT=6379
+REDIS_PASSWORD="password"
+REDIS_DB_NUMBER=0
