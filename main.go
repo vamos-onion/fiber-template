@@ -30,13 +30,13 @@ func main() {
 	// Open & Close log file
 	defer logger.FileClose()
 
-	// // Database pool
+	// Database pool
 	database.InitDBConnection(app)
 
 	// Middlewares.
 	middleware.FiberMiddleware(app) // Register Fiber's middleware for app.
 
-	// // Redis pool
+	// Redis pool
 	cache.InitRedisConnection(app)
 
 	// Routes.
