@@ -91,7 +91,16 @@ func FileClose() {
 	}
 }
 
+func dirInit() {
+	if _, err := os.Stat("./logs"); os.IsNotExist(err) {
+		os.Mkdir("./logs", 0777)
+	} else {
+		os.Chmod("./logs", 0777)
+	}
+}
+
 func InitLogger() {
+	dirInit()
 	logrusInit()
 	logrusStdoutInit()
 	logFiberInit()
