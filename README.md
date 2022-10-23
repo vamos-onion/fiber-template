@@ -84,6 +84,11 @@ create table sso_user
 
 <br>
 
+## 🆘Known issues
+- `logrus.Logger.SetReportCaller(true)`
+  - only printing the point in `logger.go` file
+  - if you want to print out original logrus report caller, should use logrus object directly
+
 ## ⚠️License
 The packages that I used include MIT, BSD-2, and BSD-3 Licenses. \
 Please be aware of use it.
