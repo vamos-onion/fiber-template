@@ -1,3 +1,4 @@
+[![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://github.com/vamos-onion/fiber-template/blob/master/LICENSE)
 # Fiber-Template
 Simple Golang Fiber framework template
 
