@@ -1,10 +1,10 @@
 [![License](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://github.com/vamos-onion/fiber-template/blob/master/LICENSE)
-# Fiber-Template
+# ⚡️Fiber-Template
 Simple Golang Fiber framework template
 
 <br>
 
-## Dependencies
+## 🏗️Dependencies
 - Go >= 1.17
 - RDB
   - MariaDB or MySQL
@@ -13,7 +13,7 @@ Simple Golang Fiber framework template
 
 <br>
 
-## Used packages
+## 🗂️Used packages
 - `go-fiber` : main framework
   - https://github.com/gofiber/fiber
   - https://gofiber.io/
@@ -36,7 +36,7 @@ Simple Golang Fiber framework template
   
 <br>
 
-## How to run
+## 🚀How to run
 - DB / Redis settings (If you wanna use)
 - generate `.env` file using `env-sample`
 - `git clone https://github.com/vamos-onion/fiber-template.git`
@@ -44,7 +44,7 @@ Simple Golang Fiber framework template
 
 <br>
 
-## DB settings
+## 🗄️DB settings
 ### Create MariaDB Table
 ```sql
 create table example
@@ -84,6 +84,8 @@ create table sso_user
 
 <br>
 
-#### Thx to use my template
+## ⚠️License
 The packages that I used include MIT, BSD-2, and BSD-3 Licenses. \
 Please be aware of use it.
+
+#### 😊 Thx 👍
