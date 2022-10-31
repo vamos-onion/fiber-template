@@ -33,7 +33,7 @@ func (s *SqlQuery) SSO(m *models.SsoUser) error {
 		where username = ? and organization = ?;
 	`, m.Username, m.Organization).Count(&cnt)
 	if cnt > 0 {
-		return gorm.ErrRegistered
+		return nil
 	}
 	return s.DB.Table("sso_user").Create(m).Error
 }
