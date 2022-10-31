@@ -3,13 +3,12 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fiber-template/app/interfaces"
 	"fiber-template/app/models"
 	"fiber-template/app/queries"
 	"fiber-template/pkg/middleware"
 	log "fiber-template/pkg/utils/logger"
-	"reflect"
+	"fiber-template/platform/database"
 	"runtime/debug"
 	"time"
 
@@ -19,9 +18,8 @@ import (
 )
 
 // Websocket APIs List up
-//	- func (w *wsController) example() {...}
-//	- func (w *wsController) keepAlive() {...}
-//
+//   - func (w *wsController) example() {...}
+//   - func (w *wsController) keepAlive() {...}
 type wsController struct {
 	conn       *websocket.Conn
 	apiRequest *models.API
@@ -37,13 +35,20 @@ func newWsClient(c *websocket.Conn) *wsController {
 		conn:       c,
 		apiRequest: &models.API{},
 		log:        l,
-		rdbQuery:   &queries.SqlQuery{Log: l},
+		rdbQuery: &queries.SqlQuery{
+			Log: l,
+		},
 		redisQuery: &queries.RedisQuery{Log: l},
 	}
 }
 
-func txSet(db *gorm.DB) *context.Context {
-	newCtx := context.WithValue(context.Background(), middleware.Tx("Tx"), db.Begin())
+func (w *wsController) txSet() *context.Context {
+	db := database.DB.MariaDB.Begin()
+	w.rdbQuery = &queries.SqlQuery{
+		Log: w.log,
+		DB:  db,
+	}
+	newCtx := context.WithValue(context.Background(), middleware.Tx("Tx"), db)
 	return &newCtx
 }
 
@@ -91,7 +96,7 @@ func WsConn(c *websocket.Conn) {
 		}
 		switch w.apiRequest.Request {
 		case "example":
-			go w.example(c, txSet(c.Locals("RdbConnection").(*gorm.DB)))
+			go w.example(c)
 		case "keep-alive":
 			go w.keepAlive()
 		default:
@@ -104,14 +109,14 @@ func WsConn(c *websocket.Conn) {
 	}
 }
 
-func (w *wsController) example(c *websocket.Conn, ctx *context.Context) {
-	w.zeroValid(w.apiRequest.Body)
+func (w *wsController) example(c *websocket.Conn) {
+	ctx := w.txSet()
 	db := (*ctx).Value(middleware.Tx("Tx")).(*gorm.DB)
 	defer db.Rollback()
 	t := &models.Example{
 		Payload: "example",
 	}
-	err := w.rdbQuery.Update(db, t)
+	err := w.rdbQuery.Update(t)
 	if err != nil {
 		c.WriteJSON(&models.R{
 			Status:      fiber.StatusInternalServerError,
@@ -120,7 +125,7 @@ func (w *wsController) example(c *websocket.Conn, ctx *context.Context) {
 		})
 		return
 	}
-	rv, err := w.rdbQuery.SelectAll(db, t)
+	rv, err := w.rdbQuery.SelectAll(t)
 	if err != nil {
 		c.WriteJSON(&models.R{
 			Status:      fiber.StatusInternalServerError,
@@ -147,27 +152,4 @@ func (w *wsController) keepAlive() {
 		Transaction: w.apiRequest.Transaction,
 		Response:    "keep-alive",
 	})
-}
-
-// The methods / functions below are not Websocket APIs.
-//	- only used in other APIs
-//	func (w *wsController) zeroValid(param interface{}) error {...}
-//
-// Used in APIs
-//
-func (w *wsController) zeroValid(param interface{}) error {
-	s := reflect.ValueOf(param).Elem()
-	typeOfT := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-		if f.IsZero() {
-			w.log.Errorf("%d: %s %s = %v ... zero-value\n",
-				i, typeOfT.Field(i).Name, f.Type(), f.Interface())
-			return errors.New("json field '" + typeOfT.Field(i).Tag.Get("json") +
-				"' has zero value")
-		}
-		w.log.Debugf("%d: %s %s = %v\n", i,
-			typeOfT.Field(i).Name, f.Type(), f.Interface())
-	}
-	return nil
 }

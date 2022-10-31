@@ -9,14 +9,15 @@ import (
 
 type SqlQuery struct {
 	Log *log.User
+	DB  *gorm.DB
 }
 
-func (s *SqlQuery) Update(db interface{}, t *models.Example) error {
-	return db.(*gorm.DB).Table("example").Create(t).Error
+func (s *SqlQuery) Update(t *models.Example) error {
+	return s.DB.Table("example").Create(t).Error
 }
 
-func (s *SqlQuery) SelectAll(db interface{}, t *models.Example) (rv []*models.ExampleTable, err error) {
-	err = db.(*gorm.DB).Raw(`
+func (s *SqlQuery) SelectAll(t *models.Example) (rv []*models.ExampleTable, err error) {
+	err = s.DB.Raw(`
 		select *
 		from example
 		where payload = ?;
@@ -24,9 +25,9 @@ func (s *SqlQuery) SelectAll(db interface{}, t *models.Example) (rv []*models.Ex
 	return
 }
 
-func (s *SqlQuery) SSO(db interface{}, m *models.SsoUser) error {
+func (s *SqlQuery) SSO(m *models.SsoUser) error {
 	var cnt int64
-	_ = db.(*gorm.DB).Raw(`
+	_ = s.DB.Raw(`
 		select count(sso_user.seq)
 		from sso_user
 		where username = ? and organization = ?;
@@ -34,11 +35,11 @@ func (s *SqlQuery) SSO(db interface{}, m *models.SsoUser) error {
 	if cnt > 0 {
 		return gorm.ErrRegistered
 	}
-	return db.(*gorm.DB).Table("sso_user").Create(m).Error
+	return s.DB.Table("sso_user").Create(m).Error
 }
 
-func (s *SqlQuery) GetAccountInfo(db interface{}, m *models.SsoUser) error {
-	return db.(*gorm.DB).Raw(`
+func (s *SqlQuery) GetAccountInfo(m *models.SsoUser) error {
+	return s.DB.Raw(`
 		select organization, username, user_index
 		from sso_user
 		where status = 1 and user_uuid =?
@@ -46,8 +47,8 @@ func (s *SqlQuery) GetAccountInfo(db interface{}, m *models.SsoUser) error {
 		m.UserUuid).Scan(&m).Error
 }
 
-func (s *SqlQuery) GetOrgList(db interface{}, m *[]models.Organization) error {
-	return db.(*gorm.DB).Raw(`
+func (s *SqlQuery) GetOrgList(m *[]models.Organization) error {
+	return s.DB.Raw(`
 		select *
 		from organization
 		where status = 1;
