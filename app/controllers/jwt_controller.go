@@ -22,7 +22,6 @@ import (
 
 type JwtController struct {
 	ctx        *fiber.Ctx
-	apiRequest *models.API
 	log        *log.User
 	account    *models.SsoUser
 	rdbQuery   interfaces.RdbQuery
@@ -37,7 +36,6 @@ func newJwtClient(c *fiber.Ctx) *JwtController {
 	}
 	return &JwtController{
 		ctx:        c,
-		apiRequest: &models.API{},
 		log:        l,
 		account:    &models.SsoUser{},
 		rdbQuery:   s,
@@ -60,40 +58,27 @@ func SSO(c *fiber.Ctx) error {
 	}
 
 	// Checking received data from JSON body.
-	if err := c.BodyParser(j.apiRequest); err != nil {
+	if err := c.BodyParser(requestBody); err != nil {
 		// Return status 400 and error message.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
 	// Parsing received data from JSON body
-	if err := zeroValid(j.apiRequest); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
-		})
-	}
-
-	// Parsing received data from JSON body's body field.
-	jsonParse(j.apiRequest.Body, &requestBody)
 	if err := zeroValid(requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
 	// Verifying the length of the bytes of the requested payload
 	if len(requestBody.SSO) < 10 {
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "failed; your request contains invalid data",
+			Status:   fiber.StatusBadRequest,
+			Response: "failed; your request contains invalid data",
 		})
 	}
 
@@ -104,9 +89,8 @@ func SSO(c *fiber.Ctx) error {
 	if clientAccessTime > minAccessTime {
 		strconv.FormatInt(minAccessTime, 10)
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, your request contains invalid data",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, your request contains invalid data",
 		})
 	}
 
@@ -117,9 +101,8 @@ func SSO(c *fiber.Ctx) error {
 	if len(separated) < 3 {
 		// failed to verify sso secret key
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, your request format is wrong",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, your request format is wrong",
 		})
 	}
 
@@ -129,9 +112,8 @@ func SSO(c *fiber.Ctx) error {
 	if separated[2] != ssoSecret {
 		// failed to verify sso secret key
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, your request contains unauthorized data",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, your request contains unauthorized data",
 		})
 	}
 	j.log.Infoln("verified user")
@@ -159,9 +141,8 @@ func SSO(c *fiber.Ctx) error {
 	err = j.rdbQuery.SSO(m)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: err.Error(),
 		})
 	}
 
@@ -170,9 +151,8 @@ func SSO(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 500 and token generation error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: err.Error(),
 		})
 	}
 
@@ -190,9 +170,8 @@ func SSO(c *fiber.Ctx) error {
 	if errSaveToRedis != nil {
 		// Return status 500 and Redis connection error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    errSaveToRedis.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: errSaveToRedis.Error(),
 		})
 	}
 
@@ -223,36 +202,21 @@ func SSO(c *fiber.Ctx) error {
 
 	// Return status 200 OK.
 	return c.JSON(&models.R{
-		Status:      fiber.StatusOK,
-		Transaction: j.apiRequest.Transaction,
-		Response:    "success",
+		Status:   fiber.StatusOK,
+		Response: "success",
 	})
 }
 
 // UserSignOut method to de-authorize user and delete refresh token from Redis.
 //
 func UserSignOut(c *fiber.Ctx) error {
-	// Create a new client
-	j := newJwtClient(c)
-
-	// Checking received data from JSON body.
-	if err := c.BodyParser(j.apiRequest); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
-		})
-	}
-
 	// Get claims from JWT.
 	claims, err := utils.ExtractTokenMetadata(c)
 	if err != nil {
 		// Return status 500 and JWT parse error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: err.Error(),
 		})
 	}
 
@@ -267,9 +231,8 @@ func UserSignOut(c *fiber.Ctx) error {
 	if errDelFromRedis != nil {
 		// Return status 500 and Redis deletion error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    errDelFromRedis.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: errDelFromRedis.Error(),
 		})
 	}
 
@@ -281,19 +244,6 @@ func UserSignOut(c *fiber.Ctx) error {
 //	- both access & refresh token must be contained
 //
 func RenewTokens(c *fiber.Ctx) error {
-	// Create a new client
-	j := newJwtClient(c)
-
-	// Checking received data from JSON body.
-	if err := c.BodyParser(j.apiRequest); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
-		})
-	}
-
 	// Get now time.
 	now := time.Now().Unix()
 
@@ -302,9 +252,8 @@ func RenewTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 500 and JWT parse error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: err.Error(),
 		})
 	}
 
@@ -315,9 +264,8 @@ func RenewTokens(c *fiber.Ctx) error {
 	if now > expiresAccessToken {
 		// Return status 401 and unauthorized error message.
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, check expiration time of your token",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, check expiration time of your token",
 		})
 	}
 
@@ -326,9 +274,8 @@ func RenewTokens(c *fiber.Ctx) error {
 	renew.RefreshToken = c.Cookies("refresh")
 	if strings.Count(renew.RefreshToken, "") == 1 {
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, please check your refresh token",
+			Status:   fiber.StatusBadRequest,
+			Response: "unauthorized, please check your refresh token",
 		})
 	}
 
@@ -337,18 +284,16 @@ func RenewTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 400 and error message.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
 	// Checking, if now time greather than Refresh token expiration time.
 	if now > expiresRefreshToken {
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, your session was ended earlier",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, your session was ended earlier",
 		})
 	}
 
@@ -368,9 +313,8 @@ func RenewTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 500 and token generation error.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
@@ -385,9 +329,8 @@ func RenewTokens(c *fiber.Ctx) error {
 	if errRedis != nil {
 		// Return status 500 and Redis connection error.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    errRedis.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: errRedis.Error(),
 		})
 	}
 
@@ -418,9 +361,8 @@ func RenewTokens(c *fiber.Ctx) error {
 
 	// Return status 200 OK.
 	return c.JSON(&models.R{
-		Status:      fiber.StatusOK,
-		Transaction: j.apiRequest.Transaction,
-		Response:    "success",
+		Status:   fiber.StatusOK,
+		Response: "success",
 	})
 }
 
@@ -429,19 +371,6 @@ func RenewTokens(c *fiber.Ctx) error {
 //	- both access & refresh token must be contained
 //
 func RecreateTokens(c *fiber.Ctx) error {
-	// Create a new client
-	j := newJwtClient(c)
-
-	// Checking received data from JSON body.
-	if err := c.BodyParser(j.apiRequest); err != nil {
-		// Return status 400 and error message.
-		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
-		})
-	}
-
 	// Get now time.
 	now := time.Now().Unix()
 
@@ -450,9 +379,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 500 and JWT parse error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
-			Status:      fiber.StatusInternalServerError,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusInternalServerError,
+			Response: err.Error(),
 		})
 	}
 
@@ -463,9 +391,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if now < expiresAccessToken {
 		// Return status 401 and unauthorized error message.
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, check expiration time of your token",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, check expiration time of your token",
 		})
 	}
 
@@ -474,9 +401,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	renew.RefreshToken = c.Cookies("refresh")
 	if strings.Count(renew.RefreshToken, "") == 1 {
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, please check your refresh token",
+			Status:   fiber.StatusBadRequest,
+			Response: "unauthorized, please check your refresh token",
 		})
 	}
 
@@ -485,9 +411,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 400 and error message.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
@@ -495,9 +420,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if now > expiresRefreshToken {
 		// Return status 401 and unauthorized error message.
 		return c.Status(fiber.StatusUnauthorized).JSON(&models.R{
-			Status:      fiber.StatusUnauthorized,
-			Transaction: j.apiRequest.Transaction,
-			Response:    "unauthorized, your session was ended earlier",
+			Status:   fiber.StatusUnauthorized,
+			Response: "unauthorized, your session was ended earlier",
 		})
 	}
 
@@ -509,9 +433,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if err != nil {
 		// Return status 500 and token generation error.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    err.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
 		})
 	}
 
@@ -526,9 +449,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 	if errRedis != nil {
 		// Return status 500 and Redis connection error.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
-			Status:      fiber.StatusBadRequest,
-			Transaction: j.apiRequest.Transaction,
-			Response:    errRedis.Error(),
+			Status:   fiber.StatusBadRequest,
+			Response: errRedis.Error(),
 		})
 	}
 
@@ -559,9 +481,8 @@ func RecreateTokens(c *fiber.Ctx) error {
 
 	// Return status 200 OK.
 	return c.JSON(&models.R{
-		Status:      fiber.StatusOK,
-		Transaction: j.apiRequest.Transaction,
-		Response:    "success",
+		Status:   fiber.StatusOK,
+		Response: "success",
 	})
 }
 
