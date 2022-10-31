@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 type JwtController struct {
@@ -30,12 +31,16 @@ type JwtController struct {
 
 func newJwtClient(c *fiber.Ctx) *JwtController {
 	l := log.NewUser()
+	s := &queries.SqlQuery{
+		Log: l,
+		DB:  c.UserContext().Value(middleware.Tx("RdbConnection")).(*gorm.DB),
+	}
 	return &JwtController{
 		ctx:        c,
 		apiRequest: &models.API{},
 		log:        l,
 		account:    &models.SsoUser{},
-		rdbQuery:   &queries.SqlQuery{Log: l},
+		rdbQuery:   s,
 		redisQuery: &queries.RedisQuery{Log: l},
 	}
 }
@@ -151,9 +156,7 @@ func SSO(c *fiber.Ctx) error {
 		Status:       true,
 	}
 	var err error
-	db := c.UserContext().Value(middleware.Tx("RdbConnection"))
-	/* j.account, err = */
-	j.rdbQuery.SSO(db, m)
+	err = j.rdbQuery.SSO(m)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
 			Status:      fiber.StatusInternalServerError,
