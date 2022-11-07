@@ -17,7 +17,7 @@ type restController struct {
 	ctx        *fiber.Ctx
 	apiRequest *models.API
 	log        *log.User
-	account    *models.SsoUser
+	account    *models.Account
 	rdbQuery   interfaces.RdbQuery
 	redisQuery interfaces.RedisQuery
 }
@@ -25,7 +25,7 @@ type restController struct {
 func newClient(c *fiber.Ctx) *restController {
 	l := log.NewUser()
 	id := c.Locals("id")
-	account := &models.SsoUser{}
+	account := &models.Account{}
 	s := &queries.SqlQuery{
 		Log: l,
 		DB:  c.UserContext().Value(middleware.Tx("RdbConnection")).(*gorm.DB),
@@ -33,9 +33,9 @@ func newClient(c *fiber.Ctx) *restController {
 	if id == nil {
 		l.Information = "no user info"
 	} else {
-		account.UserUuid = id.(uuid.UUID)
+		account.AccountUuid = id.(uuid.UUID)
 		s.GetAccountInfo(account)
-		l.Information = account.Username
+		l.Information = account.AccountName
 	}
 	return &restController{
 		ctx:        c,

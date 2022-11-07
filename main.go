@@ -41,6 +41,7 @@ func main() {
 
 	// Routes.
 	routes.HttpRoutes(app)      // Register a public routes for app.
+	routes.AccountRoutes(app)   // Register a public account routes for app.
 	routes.WebsocketRoutes(app) // Register a public websocket routes for app.
 
 	// Start server (with or without graceful shutdown).
