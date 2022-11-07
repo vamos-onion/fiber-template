@@ -71,7 +71,7 @@ create table sso_user
     organization varchar(50) default '' null,
     username     varchar(30) default '' not null,
     user_uuid    varchar(50)            null,
-    user_index   bigint(50)                null,
+    user_index   bigint(100)                null,
     status       tinyint     default 0  null,
     constraint sso_user_user_index_uindex
         unique (user_index),
