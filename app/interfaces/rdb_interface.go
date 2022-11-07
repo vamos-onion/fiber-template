@@ -37,11 +37,9 @@ func SelectAll(r RdbQuery, e *models.Example) ([]*models.ExampleTable, error) {
 func SSO(r RdbQuery, s *models.Organization, n *models.Account) error {
 	return r.SSO(s, n)
 }
-
 func GetAccountInfo(r RdbQuery, s *models.Account) error {
 	return r.GetAccountInfo(s)
 }
-
 func GetOrgList(r RdbQuery, s *[]models.Organization) error {
 	return r.GetOrgList(s)
 }
