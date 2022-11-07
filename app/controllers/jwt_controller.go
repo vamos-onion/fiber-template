@@ -22,51 +22,50 @@ import (
 
 type JwtController struct {
 	ctx        *fiber.Ctx
+	apiRequest *models.API
 	log        *log.User
-	account    *models.SsoUser
+	account    *models.Account
 	rdbQuery   interfaces.RdbQuery
 	redisQuery interfaces.RedisQuery
 }
 
 func newJwtClient(c *fiber.Ctx) *JwtController {
 	l := log.NewUser()
-	s := &queries.SqlQuery{
-		Log: l,
-		DB:  c.UserContext().Value(middleware.Tx("RdbConnection")).(*gorm.DB),
-	}
 	return &JwtController{
 		ctx:        c,
+		apiRequest: &models.API{},
 		log:        l,
-		account:    &models.SsoUser{},
-		rdbQuery:   s,
+		account:    &models.Account{},
+		rdbQuery: &queries.SqlQuery{
+			Log: l,
+			DB:  c.UserContext().Value(middleware.Tx("RdbConnection")).(*gorm.DB),
+		},
 		redisQuery: &queries.RedisQuery{Log: l},
 	}
 }
 
 // SSO is verifying user and set token as key, value in Redis.
-//	- Single Sign On
-//	- Some customers would not use OAuth, and this method is for them.
-//	- SSO := timestamp + base64(organization + " " + username + " " + sha256(saltkey + username + timestamp))
-//
+//   - Single Sign On
+//   - Some customers would not use OAuth, and this method is for them.
+//   - SSO := timestamp + base64(organization + " " + email + " " + sha256(saltkey + email + timestamp))
 func SSO(c *fiber.Ctx) error {
 	// Create a new client
 	j := newJwtClient(c)
 
 	// Create a new user struct.
-	requestBody := &models.Login{
+	requestBody := &models.SSO{
 		// SSO string `json:"sso"`
 	}
 
-	// Checking received data from JSON body.
+	// Parsing received data from JSON body's body field.
 	if err := c.BodyParser(requestBody); err != nil {
-		// Return status 400 and error message.
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
 			Status:   fiber.StatusBadRequest,
-			Response: err.Error(),
+			Response: "failed; invalid body",
 		})
 	}
 
-	// Parsing received data from JSON body
+	// Zero value checking
 	if err := zeroValid(requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
 			Status:   fiber.StatusBadRequest,
@@ -127,19 +126,28 @@ func SSO(c *fiber.Ctx) error {
 	*	- set credential
 	**/
 	credentials = append(credentials, "next_to_us_sso:user")
-	v, _ := utils.MakeUintUniqueID()
 
+	// timestamp + base64(organization + " " + email + " " + sha256(saltkey + email + timestamp))
 	// Find the user info & upsert info
-	m := &models.SsoUser{
-		Organization: separated[0],
-		Username:     separated[1],
-		UserUuid:     utils.MakeUID(),
-		UserIndex:    v,
+	pwd := os.Getenv("SSO_SECRET") + separated[1] + separated[0]
+	utils.HashPassword(&pwd)
+	a := &models.Account{
+		AccountId:    separated[1],
+		AccountPwd:   pwd,
+		AccountName:  separated[1],
+		AccountEmail: separated[1],
+		AccountUuid:  utils.MakeUID(),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 		Status:       true,
 	}
-	var err error
-	err = j.rdbQuery.SSO(m)
-	if err != nil {
+	m := &models.Organization{
+		Organization: separated[0],
+		Status:       true,
+	}
+
+	j.rdbQuery.SSO(m, a)
+	if err := j.rdbQuery.Login(a); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
 			Status:   fiber.StatusInternalServerError,
 			Response: err.Error(),
@@ -147,7 +155,7 @@ func SSO(c *fiber.Ctx) error {
 	}
 
 	// Generate a new pair of access and refresh tokens.
-	tokens, err := utils.GenerateNewTokens(j.account.UserUuid.String(), credentials)
+	tokens, err := utils.GenerateNewTokens(j.account.AccountUuid.String(), credentials)
 	if err != nil {
 		// Return status 500 and token generation error.
 		return c.Status(fiber.StatusInternalServerError).JSON(&models.R{
@@ -157,7 +165,7 @@ func SSO(c *fiber.Ctx) error {
 	}
 
 	// Define user ID.
-	userID := j.account.UserUuid
+	userID := j.account.AccountUuid
 
 	// Create a new Redis connection.
 	connRedis := cache.Redis.UserConn
@@ -208,8 +216,19 @@ func SSO(c *fiber.Ctx) error {
 }
 
 // UserSignOut method to de-authorize user and delete refresh token from Redis.
-//
 func UserSignOut(c *fiber.Ctx) error {
+	// Create a new client
+	j := newJwtClient(c)
+
+	// Checking received data from JSON body.
+	if err := c.BodyParser(j.apiRequest); err != nil {
+		// Return status 400 and error message.
+		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
+		})
+	}
+
 	// Get claims from JWT.
 	claims, err := utils.ExtractTokenMetadata(c)
 	if err != nil {
@@ -241,9 +260,20 @@ func UserSignOut(c *fiber.Ctx) error {
 }
 
 // before access token expired
-//	- both access & refresh token must be contained
-//
+//   - both access & refresh token must be contained
 func RenewTokens(c *fiber.Ctx) error {
+	// Create a new client
+	j := newJwtClient(c)
+
+	// Checking received data from JSON body.
+	if err := c.BodyParser(j.apiRequest); err != nil {
+		// Return status 400 and error message.
+		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
+		})
+	}
+
 	// Get now time.
 	now := time.Now().Unix()
 
@@ -367,10 +397,21 @@ func RenewTokens(c *fiber.Ctx) error {
 }
 
 // After access token expired
-//	- expired token must be contained
-//	- both access & refresh token must be contained
-//
+//   - expired token must be contained
+//   - both access & refresh token must be contained
 func RecreateTokens(c *fiber.Ctx) error {
+	// Create a new client
+	j := newJwtClient(c)
+
+	// Checking received data from JSON body.
+	if err := c.BodyParser(j.apiRequest); err != nil {
+		// Return status 400 and error message.
+		return c.Status(fiber.StatusBadRequest).JSON(&models.R{
+			Status:   fiber.StatusBadRequest,
+			Response: err.Error(),
+		})
+	}
+
 	// Get now time.
 	now := time.Now().Unix()
 
