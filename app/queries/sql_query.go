@@ -25,8 +25,6 @@ func (s *SqlQuery) ModifyAccount(m *models.Modify, userUuid string) error {
 	if m.AccountEmail != "" {
 		email = "account_email = '" + m.AccountEmail + "',"
 	}
-	// query := strings.Trim(pwd+name+email, ",")
-	// s.Log.Debugln("set : ", query)
 	return s.DB.Exec(`
 		UPDATE account
 		SET `+pwd+name+email+`
