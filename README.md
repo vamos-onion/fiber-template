@@ -58,27 +58,37 @@ create table organization
 (
     seq          int(50) auto_increment
         primary key,
-    organization varchar(50) default '' not null,
-    status       tinyint     default 0  not null,
+    organization varchar(50)       not null,
+    org_uuid     varchar(50)       null,
+    status       tinyint default 0 not null,
+    constraint organization_org_uuid_uindex
+        unique (org_uuid),
     constraint organization_organization_uindex
         unique (organization)
 );
 
-create table sso_user
+create table account
 (
-    seq          int(50) auto_increment
+    seq           int unsigned auto_increment
         primary key,
-    organization varchar(50) default '' null,
-    username     varchar(30) default '' not null,
-    user_uuid    varchar(50)            null,
-    user_index   bigint(100)                null,
-    status       tinyint     default 0  null,
-    constraint sso_user_user_index_uindex
-        unique (user_index),
-    constraint sso_user_user_uuid_uindex
-        unique (user_uuid),
-    constraint sso_user_organization_organization_fk
-        foreign key (organization) references organization (organization)
+    auth_seq      int(50)           null,
+    account_id    varchar(20)       not null,
+    account_pwd   varchar(100)      not null,
+    account_name  varchar(20)       null,
+    account_email varchar(50)       not null,
+    account_uuid  varchar(40)       not null,
+    status        tinyint default 1 not null,
+    created_at    datetime          null,
+    updated_at    datetime          null,
+    connected_at  datetime          null,
+    constraint users_account_email_uindex
+        unique (account_email),
+    constraint users_account_id_uindex
+        unique (account_id),
+    constraint users_account_uuid_uindex
+        unique (account_uuid),
+    constraint account_organization_seq_fk
+        foreign key (auth_seq) references organization (seq)
 );
 ```
 
