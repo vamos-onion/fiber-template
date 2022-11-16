@@ -37,9 +37,9 @@ func (s *SqlQuery) UpdateAccount(m *models.RegisterQuery) error {
 	err := s.DB.Exec(`
 		insert into account # (auth_seq, account_id, account_pwd, account_name, account_email, account_uuid, created_at, updated_at)
 		set
-			auth_seq = (select seq
-			from organization
-			where organization = ?),
+			auth_seq = (select o.seq
+			from organization as o
+			where o.organization = ?),
 			account_id = ?,
 			account_pwd = ?,
 			account_name = ?,

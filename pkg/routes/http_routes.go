@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fiber-template/app/controllers"
+	"fiber-template/pkg/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,10 +19,10 @@ func HttpRoutes(a *fiber.App) {
 
 func AccountRoutes(a *fiber.App) {
 	account_route := a.Group("/account")
-	account_route.Post("/sso", controllers.SSO)
+	account_route.Post("/sso", middleware.AutoTx(), controllers.SSO)
 	account_route.Post("/register", controllers.Register)
-	account_route.Post("/login", controllers.Login)
-	account_route.Post("/modify", controllers.Modify)
+	account_route.Post("/login", middleware.AutoTx(), controllers.Login)
+	account_route.Post("/modify", middleware.AutoTx(), controllers.Modify)
 	account_route.Post("/withdrawal", controllers.Withdrawal)
 	// account_route.Get("/logout", controllers.Logout)
 }
