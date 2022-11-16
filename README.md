@@ -71,7 +71,7 @@ create table account
 (
     seq           int unsigned auto_increment
         primary key,
-    auth_seq      int(50)           null,
+    auth_seq      int(50)           not null,
     account_id    varchar(20)       not null,
     account_pwd   varchar(100)      not null,
     account_name  varchar(20)       null,
