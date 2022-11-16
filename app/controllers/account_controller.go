@@ -89,7 +89,7 @@ func Register(c *fiber.Ctx) error {
 			AccountUuid:  utils.MakeUID(),
 			Status:       true,
 		},
-		Organization: "next2us",
+		Organization: "vamos",
 	}
 	err := n.rdbQuery.UpdateAccount(m)
 	if err != nil {
